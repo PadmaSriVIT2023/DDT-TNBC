@@ -1,0 +1,13 @@
+from ddt import load_patient_data, calibrate, optimize
+
+# Load multimodal data (MRI, ctDNA, CTC)
+data = load_patient_data('examples/example_patient_data.csv')
+
+# Calibrate model parameters
+posterior = calibrate(data, method='DRAM', n_iter=50000)
+
+# Detect chemoresistance
+alert = detect_resistance(posterior, threshold=0.95)
+
+# Re-optimize schedule
+opt_schedule = optimize(posterior, strategy='dose_reduction')
