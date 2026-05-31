@@ -1,0 +1,29 @@
+# Dynamic Digital Twin for TNBC Chemoresistance Re-optimization (DDT-TNBC)
+
+This repository contains the code for the manuscript:
+
+**"Dynamic Digital Twin for Real-Time Prediction and Predictive Re-optimization of Chemoresistance in Triple-Negative Breast Cancer"**  
+Padmasri Sridharan, Mini Ghosh  
+*Department of Mathematics, Vellore Institute of Technology, Chennai, India*
+
+## Overview
+
+The DDT framework integrates:
+- A reaction‑diffusion PDE model of tumour growth with sensitive/resistant cell populations.
+- Proper orthogonal decomposition (POD) reduced‑order model for fast calibration (378× acceleration).
+- Bayesian inference (DRAM‑MCMC) for patient‑specific parameter estimation.
+- Optimal control theory for adaptive chemotherapy scheduling.
+- Real‑time data ingestion from MRI, ctDNA, CTCs, and clinical chemistry.
+
+## Requirements
+
+- Python 3.11+
+- R 4.4.1 (for external validation and propensity score matching)
+- Dependencies listed in `requirements.txt`
+
+## Installation
+
+```bash
+git clone https://github.com/odenlab/DDT-TNBC.git
+cd DDT-TNBC
+pip install -e .
