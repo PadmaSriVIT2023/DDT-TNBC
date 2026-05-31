@@ -1,0 +1,54 @@
+import casadi as ca
+import numpy as np
+
+def optimize_dose(parameters, standard_doses, w1=1.0, w2=0.5, strategy='dose_reduction'):
+    """
+    Solve optimal control problem using CasADi / IPOPT.
+    
+    Parameters
+    ----------
+    parameters : dict
+        Patient-specific parameters (k_p, alpha_S, etc.).
+    standard_doses : array
+        Standard-of-care dose schedule (mg/m²) over time.
+    w1, w2 : float
+        Weights for tumour cell number and cumulative dose.
+    strategy : str
+        'dose_reduction' (w1=1, w2=0.5) or 'efficacy_max' (w1=2, w2=1 with dose constraint).
+    
+    Returns
+    -------
+    opt_doses : array
+        Optimised dose schedule.
+    """
+    # Define symbolic variables
+    n = len(standard_doses)
+    d = ca.MX.sym('d', n)          # decision variables: doses
+    param_symbols = {k: ca.MX.sym(k) for k in parameters}
+    
+    # Simplified tumour growth model (ODE)
+    N = ca.MX.sym('N')             # tumour cell number
+    C = ca.MX.sym('C')             # drug concentration in tumour
+    
+    # ODEs: dN/dt = k_p*N*(1-N/theta) - alpha*C*N, dC/dt = -lambda*C + sum(d_i * delta)
+    # (discretised)
+    
+    # Objective
+    N_final = 1.0   # dummy – should be solved
+    total_dose = ca.sum1(d)
+    J = w1 * (N_final / 1.0) + w2 * (total_dose / ca.sum1(standard_doses))
+    
+    # Constraints
+    g = []
+    g.append(total_dose <= ca.sum1(standard_doses)) if strategy == 'efficacy_max' else None
+    g.append(d >= 0.5 * standard_doses)
+    g.append(d <= 1.5 * standard_doses)
+    
+    # NLP
+    nlp = {'x': d, 'f': J, 'g': ca.vertcat(*g)}
+    solver = ca.nlpsol('solver', 'ipopt', nlp)
+    
+    # Solve
+    sol = solver(x0=standard_doses, lbg=0, ubg=0)   # equality constraints if any
+    opt_doses = sol['x'].full().flatten()
+    return opt_doses
