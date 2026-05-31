@@ -1,0 +1,30 @@
+import pandas as pd
+import requests
+from datetime import datetime
+
+def fetch_fhir_data(patient_id, fhir_server_url, auth_token):
+    """
+    Retrieve longitudinal data from FHIR R4 API.
+    
+    Returns
+    -------
+    dict with MRI volumes, ctDNA VAF, CTC counts, clinical chemistry.
+    """
+    headers = {'Authorization': f'Bearer {auth_token}', 'Accept': 'application/fhir+json'}
+    
+    # Observations for tumour size (LOINC code)
+    response = requests.get(f'{fhir_server_url}/Observation?patient={patient_id}&code=21889-1',
+                            headers=headers)
+    data = response.json()
+    
+    # Parse entries into DataFrame
+    records = []
+    for entry in data.get('entry', []):
+        obs = entry['resource']
+        records.append({
+            'date': obs['effectiveDateTime'],
+            'volume': obs['valueQuantity']['value'],
+            'unit': obs['valueQuantity']['unit']
+        })
+    df = pd.DataFrame(records)
+    return df
