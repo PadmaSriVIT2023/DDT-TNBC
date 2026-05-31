@@ -1,0 +1,37 @@
+import numpy as np
+
+def detect_resistance(posterior_samples, baseline_omega, threshold_prob=0.95, increase_threshold=0.20):
+    """
+    Detect chemoresistance based on posterior probability of ω increase.
+    
+    Parameters
+    ----------
+    posterior_samples : array (n_samples, n_params)
+    baseline_omega : float
+        Initial ω value at calibration.
+    threshold_prob : float
+        Posterior probability threshold (0.95).
+    increase_threshold : float
+        Minimum relative increase to consider resistance (20%).
+    
+    Returns
+    -------
+    alert : bool
+        True if resistance detected.
+    prob_exceed : float
+        Posterior probability that ω increased > increase_threshold.
+    """
+    # Compute ω = alpha_R/alpha_S + gamma/k_p for each sample
+    alpha_R = posterior_samples[:, 'alpha_R']
+    alpha_S = posterior_samples[:, 'alpha_S']
+    gamma = posterior_samples[:, 'gamma0']
+    k_p = posterior_samples[:, 'k_p']
+    omega = alpha_R / alpha_S + gamma / k_p
+    
+    # Probability that ω has increased more than threshold relative to baseline
+    increase_ratio = omega / baseline_omega
+    prob = np.mean(increase_ratio > (1 + increase_threshold))
+    
+    # Two consecutive updates required (handled by caller)
+    alert = prob > threshold_prob
+    return alert, prob
