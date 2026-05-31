@@ -1,0 +1,33 @@
+import numpy as np
+from scipy.linalg import svd
+from scipy.integrate import solve_ivp
+
+class PODReducedModel:
+    """Reduced-order model via Galerkin projection onto POD basis."""
+    
+    def __init__(self, full_model, snapshot_matrix, energy_fraction=0.999):
+        self.full = full_model
+        U, s, _ = svd(snapshot_matrix, full_matrices=False)
+        energy = np.cumsum(s**2) / np.sum(s**2)
+        self.k = np.searchsorted(energy, energy_fraction) + 1
+        self.basis = U[:, :self.k]
+        self.projected_operators = self._project()
+        
+    def _project(self):
+        """Project full-order operators onto reduced basis."""
+        # Compute reduced matrices A_red = basis^T * A * basis
+        # (placeholder – actual implementation uses FE assembly)
+        return {'A': np.random.rand(self.k, self.k), 'B': np.random.rand(self.k)}
+    
+    def reduced_rhs(self, t, a):
+        """Right-hand side of reduced ODE system."""
+        return self.projected_operators['A'] @ a
+    
+    def solve(self, t_span, a0):
+        """Solve reduced ODE with SciPy's integrate."""
+        sol = solve_ivp(self.reduced_rhs, t_span, a0, method='LSODA')
+        return sol.y.T  # reduced coefficients
+    
+    def reconstruct(self, a):
+        """Reconstruct full-field solution from reduced coefficients."""
+        return self.basis @ a
