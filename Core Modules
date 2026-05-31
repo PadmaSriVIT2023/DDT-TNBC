@@ -1,0 +1,63 @@
+## 3. Core modules
+
+### `ddt/pde_model.py` – Reaction‑diffusion PDE
+
+```python
+import numpy as np
+from fenics import *
+
+class ReactionDiffusionPDE:
+    """FEniCS implementation of the PDE model for tumour growth and drug response."""
+    
+    def __init__(self, mesh, parameters):
+        self.mesh = mesh
+        self.V = FunctionSpace(mesh, 'P', 1)
+        self.params = parameters
+        self.N_s = Function(self.V)
+        self.N_r = Function(self.V)
+        self.C = Function(self.V)
+        
+    def set_initial_conditions(self, N_s0, N_r0, C0):
+        """Set initial densities and drug concentration."""
+        self.N_s.assign(interpolate(Constant(N_s0), self.V))
+        self.N_r.assign(interpolate(Constant(N_r0), self.V))
+        self.C.assign(interpolate(Constant(C0), self.V))
+        
+    def form(self, dt):
+        """Return variational forms for time integration."""
+        N_s = TrialFunction(self.V)
+        N_r = TrialFunction(self.V)
+        C = TrialFunction(self.V)
+        phi = TestFunction(self.V)
+        
+        # Diffusivities
+        D_s = Constant(self.params['D_S'])
+        D_r = Constant(self.params['D_R'])
+        D_c = Constant(self.params['D_C'])
+        
+        # Reaction terms
+        k_p = Constant(self.params['k_p'])
+        theta = Constant(self.params['theta'])
+        alpha_s = Constant(self.params['alpha_S'])
+        alpha_r = Constant(self.params['alpha_R'])
+        gamma = Constant(self.params['gamma'])
+        lam = Constant(self.params['lambda'])
+        
+        # Weak forms (simplified)
+        F_Ns = (N_s - self.N_s)/dt * phi * dx + D_s * dot(grad(N_s), grad(phi)) * dx \
+               - k_p * N_s * (1 - (self.N_s + self.N_r)/theta) * phi * dx \
+               + alpha_s * self.C * N_s * phi * dx + gamma * N_s * phi * dx
+        # ... similarly for N_r and C
+        return F_Ns, F_Nr, F_C
+    
+    def solve(self, dt, T):
+        """Time integration from 0 to T with time step dt."""
+        t = 0
+        history = []
+        while t < T:
+            # Solve each component (use Newton solver)
+            solve(self.form(dt) == 0, [self.N_s, self.N_r, self.C])
+            t += dt
+            history.append([t, self.N_s.vector().get_local().mean(),
+                            self.N_r.vector().get_local().mean()])
+        return np.array(history)
